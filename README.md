@@ -27,7 +27,7 @@ allprojects {
 ```
 `module build.gradle `
 ```
-implementation 'com.github.fonuhuolian:MatisseReplugin:1.0.0'
+implementation 'com.github.fonuhuolian:MatisseReplugin:1.0.1'
 ```
 
 ## Thanks
