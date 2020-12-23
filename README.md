@@ -9,6 +9,9 @@
 
 最新项目使用了Replugin,Matisse闪退，是因为Matisse提供的Activity没有继承Replugin的Activity的问题，分享出来供使用插件化的小伙伴继续使用Matisse
 
+宿主包使用官方的集成
+插件包使用此集成
+
 > 添加依赖
 
 `root build.gradle `
