@@ -15,8 +15,12 @@
  */
 package com.zhihu.matisse.ui;
 
+import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.TypedArray;
 import android.database.Cursor;
 import android.graphics.PorterDuff;
@@ -26,6 +30,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -33,9 +38,11 @@ import android.widget.AdapterView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
 import com.qihoo360.replugin.loader.a.PluginAppCompatActivity;
@@ -56,6 +63,7 @@ import com.zhihu.matisse.internal.ui.widget.CheckRadioView;
 import com.zhihu.matisse.internal.ui.widget.IncapableDialog;
 import com.zhihu.matisse.internal.utils.MediaStoreCompat;
 import com.zhihu.matisse.internal.utils.PathUtils;
+import com.zhihu.matisse.internal.utils.PermissionCheckUtil;
 import com.zhihu.matisse.internal.utils.PhotoMetadataUtils;
 import com.zhihu.matisse.internal.utils.SingleMediaScanner;
 
@@ -77,6 +85,7 @@ public class MatisseActivity extends PluginAppCompatActivity implements
     private static final int REQUEST_CODE_PREVIEW = 23;
     private static final int REQUEST_CODE_CAPTURE = 24;
     public static final String CHECK_STATE = "checkState";
+    private static final int REQUEST_CODE_PERMISSION = 777;
     private final AlbumCollection mAlbumCollection = new AlbumCollection();
     private MediaStoreCompat mMediaStoreCompat;
     private SelectedItemCollection mSelectedCollection = new SelectedItemCollection(this);
@@ -93,6 +102,13 @@ public class MatisseActivity extends PluginAppCompatActivity implements
     private CheckRadioView mOriginal;
     private boolean mOriginalEnable;
 
+    private PermissionCheckUtil mChecker;
+
+    // 二次弹出框
+    private AlertDialog dialog;
+
+    private static final String PACKAGE_URL_SCHEME = "package:";
+
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         // programmatically set theme before super.onCreate()
@@ -105,6 +121,8 @@ public class MatisseActivity extends PluginAppCompatActivity implements
             return;
         }
         setContentView(R.layout.activity_matisse);
+
+        mChecker = new PermissionCheckUtil(this);
 
         if (mSpec.needOrientationRestriction()) {
             setRequestedOrientation(mSpec.orientation);
@@ -431,8 +449,78 @@ public class MatisseActivity extends PluginAppCompatActivity implements
     @Override
     public void capture() {
         if (mMediaStoreCompat != null) {
-            mMediaStoreCompat.dispatchCaptureIntent(this, REQUEST_CODE_CAPTURE);
+
+            if (mChecker.isNeedRequestPermissions(Manifest.permission.CAMERA))
+                ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, REQUEST_CODE_PERMISSION);
+            else
+                mMediaStoreCompat.dispatchCaptureIntent(this, REQUEST_CODE_CAPTURE);
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (requestCode == REQUEST_CODE_PERMISSION && hasAllPermissionsGranted(grantResults)) {
+            // 调用拍照
+            capture();
+        } else {
+            showMissingPermissionDialog();
+        }
+    }
+
+    // 显示缺失权限提示
+    private void showMissingPermissionDialog() {
+
+        if (dialog == null) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setTitle("帮助");
+            builder.setMessage("当前应用缺少必要权限(" + "拍照权限" + ")。"
+                    + "\n" + "\n"
+                    + "请点击" + "\"设置\"-"
+                    + "\"权限\"-" + "打开所需权限。"
+                    + "\n" + "\n"
+                    + "最后点击两次后退按钮，即可返回。"
+            );
+
+            // 拒绝, 退出应用
+            builder.setNegativeButton("退出", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    finish();
+                }
+            });
+
+            builder.setPositiveButton("设置", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    startAppSettings();
+                }
+            });
+
+            builder.setCancelable(false);
+
+            dialog = builder.create();
+        }
+
+        dialog.show();
+    }
+
+
+    // 启动应用的设置
+    private void startAppSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse(PACKAGE_URL_SCHEME + getPackageName()));
+        startActivity(intent);
+    }
+
+    // 含有全部的权限
+    private boolean hasAllPermissionsGranted(@NonNull int[] grantResults) {
+        for (int grantResult : grantResults) {
+            if (grantResult == PackageManager.PERMISSION_DENIED) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
