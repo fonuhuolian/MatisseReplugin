@@ -21,7 +21,9 @@
     <uses-permission android:name="android.permission.CAMERA" />
 
     <application>
-        <activity android:name="com.zhihu.matisse.ui.MatisseActivity" />
+        <activity
+            android:name="com.zhihu.matisse.ui.MatisseActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|uiMode" />
         <activity android:name="com.zhihu.matisse.internal.ui.AlbumPreviewActivity" />
         <activity android:name="com.zhihu.matisse.internal.ui.SelectedPreviewActivity" />
     </application>
