@@ -28,7 +28,7 @@ allprojects {
 `module build.gradle `
 ```
 implementation 'com.github.fonuhuolian:MatisseReplugin:1.0.1'
-// 1.0.2 加入了百度地图基础定位以及检索功能
+// 1.0.3 加入了百度地图基础定位以及检索功能
 ```
 
 ## Thanks
